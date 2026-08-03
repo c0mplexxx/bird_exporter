@@ -7,7 +7,8 @@ before:
     - go mod download
 
 builds:
-  - binary: bird_exporter
+  - id: bird_exporter
+    binary: bird_exporter
     env:
       - CGO_ENABLED=0
     flags:
@@ -32,3 +33,43 @@ builds:
 
 checksum:
   name_template: checksums.txt
+
+nfpms:
+  - id: deb
+    package_name: bird-exporter
+    ids:
+      - bird_exporter
+    vendor: bird_exporter maintainers
+    homepage: https://github.com/czerwonk/bird_exporter
+    maintainer: bird_exporter maintainers <czerwonk@users.noreply.github.com>
+    description: Prometheus exporter for the BIRD routing daemon
+    license: MIT
+    formats:
+      - deb
+    bindir: /usr/bin
+    section: net
+    priority: optional
+    dependencies:
+      - bird | bird2 | bird3
+    contents:
+      - src: packaging/bird-exporter.service
+        dst: /usr/lib/systemd/system/bird-exporter.service
+        file_info:
+          mode: 0644
+      - src: packaging/bird-exporter.default
+        dst: /etc/default/bird-exporter
+        type: config|noreplace
+        file_info:
+          mode: 0644
+      - src: README.md
+        dst: /usr/share/doc/bird-exporter/README.md
+        file_info:
+          mode: 0644
+      - src: packaging/README.md
+        dst: /usr/share/doc/bird-exporter/README.Debian.md
+        file_info:
+          mode: 0644
+      - src: LICENSE
+        dst: /usr/share/doc/bird-exporter/LICENSE
+        file_info:
+          mode: 0644

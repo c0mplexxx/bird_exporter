@@ -1,0 +1,4 @@
+# bird-exporter is packaged with a loopback-only endpoint. Change the listen
+# address only when the network path is protected by a firewall allowlist or a
+# TLS-authenticating reverse proxy.
+BIRD_EXPORTER_OPTS="-web.listen-address=127.0.0.1:9324 -bird.v2=true -bird.socket=/run/bird/bird.ctl -web.scrape-timeout=5s -web.max-concurrent-scrapes=1 -bird.max-response-bytes=4194304"

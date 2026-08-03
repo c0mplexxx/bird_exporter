@@ -1,0 +1,41 @@
+[Unit]
+Description=Prometheus exporter for the BIRD routing daemon
+Documentation=https://github.com/czerwonk/bird_exporter
+Wants=network-online.target
+After=network-online.target bird.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/bird-exporter
+ExecStart=/usr/bin/bird_exporter $BIRD_EXPORTER_OPTS
+DynamicUser=yes
+SupplementaryGroups=bird
+UMask=0077
+
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+
+LimitNOFILE=1024
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+
+[Install]
+WantedBy=multi-user.target

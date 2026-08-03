@@ -2,3 +2,4 @@
 .idea
 *.iml
 bird_exporter
+/artifacts/
