@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"time"
+
 	"github.com/czerwonk/bird_exporter/client"
 	"github.com/czerwonk/bird_exporter/metrics"
 	"github.com/czerwonk/bird_exporter/protocol"
@@ -17,7 +20,28 @@ type MetricCollector struct {
 }
 
 func NewMetricCollector(newFormat bool, enabledProtocols protocol.Proto, descriptionLabels bool, socketPath string) *MetricCollector {
-	c := getClient()
+	return NewMetricCollectorWithContext(
+		context.Background(),
+		newFormat,
+		enabledProtocols,
+		descriptionLabels,
+		socketPath,
+		30*time.Second,
+		64<<20,
+	)
+}
+
+// NewMetricCollectorWithContext creates a collector whose BIRD queries share one scrape context.
+func NewMetricCollectorWithContext(
+	ctx context.Context,
+	newFormat bool,
+	enabledProtocols protocol.Proto,
+	descriptionLabels bool,
+	socketPath string,
+	queryTimeout time.Duration,
+	maxResponseBytes int,
+) *MetricCollector {
+	c := getClient(ctx, queryTimeout, maxResponseBytes)
 	var e map[protocol.Proto][]metrics.MetricExporter
 
 	if newFormat {
@@ -35,13 +59,16 @@ func NewMetricCollector(newFormat bool, enabledProtocols protocol.Proto, descrip
 	}
 }
 
-func getClient() *client.BirdClient {
+func getClient(ctx context.Context, queryTimeout time.Duration, maxResponseBytes int) *client.BirdClient {
 	o := &client.BirdClientOptions{
 		BirdSocket:   *birdSocket,
 		Bird6Socket:  *bird6Socket,
 		Bird6Enabled: *bird6Enabled,
 		BirdEnabled:  *birdEnabled,
 		BirdV2:       *birdV2,
+		Context:      ctx,
+		QueryTimeout: queryTimeout,
+		MaxResponse:  maxResponseBytes,
 	}
 
 	return &client.BirdClient{Options: o}

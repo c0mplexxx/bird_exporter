@@ -1,7 +1,9 @@
 package client
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/czerwonk/bird_exporter/parser"
 	"github.com/czerwonk/bird_exporter/protocol"
@@ -20,6 +22,9 @@ type BirdClientOptions struct {
 	Bird6Enabled bool
 	BirdSocket   string
 	Bird6Socket  string
+	Context      context.Context
+	QueryTimeout time.Duration
+	MaxResponse  int
 }
 
 // GetProtocols retrieves protocol information and statistics from bird
@@ -43,7 +48,7 @@ func (c *BirdClient) GetProtocols() ([]*protocol.Protocol, error) {
 // GetOSPFAreas retrieves OSPF specific information from bird
 func (c *BirdClient) GetOSPFAreas(protocol *protocol.Protocol) ([]*protocol.OSPFArea, error) {
 	sock := c.socketFor(protocol.IPVersion)
-	b, err := birdsocket.Query(sock, fmt.Sprintf("show ospf %s", protocol.Name))
+	b, err := c.query(sock, fmt.Sprintf("show ospf %s", protocol.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +59,7 @@ func (c *BirdClient) GetOSPFAreas(protocol *protocol.Protocol) ([]*protocol.OSPF
 // GetBFDSessions retrieves BFD specific information from bird
 func (c *BirdClient) GetBFDSessions(protocol *protocol.Protocol) ([]*protocol.BFDSession, error) {
 	sock := c.socketFor(protocol.IPVersion)
-	b, err := birdsocket.Query(sock, fmt.Sprintf("show bfd sessions %s", protocol.Name))
+	b, err := c.query(sock, fmt.Sprintf("show bfd sessions %s", protocol.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +84,7 @@ func (c *BirdClient) protocolsFromBird(ipVersions []string) ([]*protocol.Protoco
 }
 
 func (c *BirdClient) protocolsFromSocket(socketPath string, ipVersion string) ([]*protocol.Protocol, error) {
-	b, err := birdsocket.Query(socketPath, "show protocols all")
+	b, err := c.query(socketPath, "show protocols all")
 	if err != nil {
 		return nil, err
 	}
@@ -97,10 +102,27 @@ func (c *BirdClient) socketFor(ipVersion string) string {
 
 // StatusFromSocket retrieves status information from bird
 func (c *BirdClient) StatusFromSocket(socketPath string) (*parser.Status, error) {
-	b, err := birdsocket.Query(socketPath, "show status")
+	b, err := c.query(socketPath, "show status")
 	if err != nil {
 		return nil, err
 	}
 
 	return parser.ParseStatus(b), nil
+}
+
+func (c *BirdClient) query(socketPath string, query string) ([]byte, error) {
+	ctx := c.Options.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	options := make([]birdsocket.Option, 0, 2)
+	if c.Options.QueryTimeout > 0 {
+		options = append(options, birdsocket.WithTimeout(c.Options.QueryTimeout))
+	}
+	if c.Options.MaxResponse > 0 {
+		options = append(options, birdsocket.WithMaxResponseBytes(c.Options.MaxResponse))
+	}
+
+	return birdsocket.QueryContext(ctx, socketPath, query, options...)
 }

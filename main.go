@@ -1,14 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
+	"time"
 
 	"github.com/czerwonk/bird_exporter/protocol"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -38,6 +38,9 @@ var (
 	bird6Enabled           = flag.Bool("bird.ipv6", true, "Get protocols from bird6 (not compatible with -bird.v2)")
 	descriptionLabels      = flag.Bool("format.description-labels", false, "Add labels from protocol descriptions.")
 	descriptionLabelsRegex = flag.String("format.description-labels-regex", "(\\w+)=(\\w+)", "Regex to extract labels from protocol description")
+	scrapeTimeout          = flag.Duration("web.scrape-timeout", 5*time.Second, "Maximum duration of one metrics scrape, including all BIRD queries.")
+	maxConcurrentScrapes   = flag.Int("web.max-concurrent-scrapes", 1, "Maximum number of scrapes allowed to query BIRD concurrently.")
+	maxResponseBytes       = flag.Int("bird.max-response-bytes", 4<<20, "Maximum accepted size of one BIRD socket reply in bytes.")
 )
 
 func init() {
@@ -73,40 +76,35 @@ func startServer() {
 		log.Info("INFO: You are using the old metric format. Please consider using the new (more convenient one) by setting -format.new=true.")
 	}
 
-	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte(`<html>
-			<head><title>Bird Routing Daemon Exporter (Version ` + version + `)</title></head>
-			<body>
-			<h1>Bird Routing Daemon Exporter</h1>
-			<p><a href="` + *metricsPath + `">Metrics</a></p>
-			<h2>More information:</h2>
-			<p><a href="https://github.com/czerwonk/bird_exporter">github.com/czerwonk/bird_exporter</a></p>
-			</body>
-			</html>`))
+	handler, err := newExporterHTTPHandler(exporterHTTPConfig{
+		MetricsPath:          *metricsPath,
+		ScrapeTimeout:        *scrapeTimeout,
+		MaxConcurrentScrapes: *maxConcurrentScrapes,
+		CollectorFactory: func(ctx context.Context) (prometheus.Collector, error) {
+			return NewMetricCollectorWithContext(
+				ctx,
+				*newFormat,
+				enabledProtocols(),
+				*descriptionLabels,
+				*birdSocket,
+				*scrapeTimeout,
+				*maxResponseBytes,
+			), nil
+		},
 	})
-	http.HandleFunc(*metricsPath, handleMetricsRequest)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	server := newExporterHTTPServer(*listenAddress, handler, *scrapeTimeout)
 
 	log.Infof("Listening for %s on %s (TLS: %v)", *metricsPath, *listenAddress, *tlsEnabled)
 	if *tlsEnabled {
-		log.Fatal(http.ListenAndServeTLS(*listenAddress, *tlsCertChainPath, *tlsKeyPath, nil))
+		log.Fatal(server.ListenAndServeTLS(*tlsCertChainPath, *tlsKeyPath))
 		return
 	}
 
-	log.Fatal(http.ListenAndServe(*listenAddress, nil))
-}
-
-func handleMetricsRequest(w http.ResponseWriter, r *http.Request) {
-	reg := prometheus.NewRegistry()
-	p := enabledProtocols()
-	c := NewMetricCollector(*newFormat, p, *descriptionLabels, *birdSocket)
-	reg.MustRegister(c)
-
-	l := log.New()
-	l.Level = log.ErrorLevel
-	promhttp.HandlerFor(reg, promhttp.HandlerOpts{
-		ErrorLog:      l,
-		ErrorHandling: promhttp.ContinueOnError,
-	}).ServeHTTP(w, r)
+	log.Fatal(server.ListenAndServe())
 }
 
 func enabledProtocols() protocol.Proto {
