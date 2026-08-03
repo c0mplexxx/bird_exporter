@@ -6,6 +6,7 @@ import (
 	"html"
 	"net/http"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,7 @@ type exporterHTTPHandler struct {
 	newCollector  collectorFactory
 	inFlight      prometheus.Gauge
 	rejected      prometheus.Counter
+	buildInfo     prometheus.Gauge
 }
 
 func newExporterHTTPHandler(config exporterHTTPConfig) (*exporterHTTPHandler, error) {
@@ -57,6 +59,12 @@ func newExporterHTTPHandler(config exporterHTTPConfig) (*exporterHTTPHandler, er
 		return nil, errors.New("collector factory must not be nil")
 	}
 
+	buildInfo := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "bird_exporter_build_info",
+		Help: "Build information for the running bird_exporter binary.",
+	}, []string{"version", "revision", "go_version"}).WithLabelValues(version, revision, runtime.Version())
+	buildInfo.Set(1)
+
 	return &exporterHTTPHandler{
 		metricsPath:   config.MetricsPath,
 		scrapeTimeout: config.ScrapeTimeout,
@@ -70,6 +78,7 @@ func newExporterHTTPHandler(config exporterHTTPConfig) (*exporterHTTPHandler, er
 			Name: "bird_exporter_scrapes_rejected_total",
 			Help: "Total number of metrics scrapes rejected by the concurrency limit.",
 		}),
+		buildInfo: buildInfo,
 	}, nil
 }
 
@@ -158,7 +167,7 @@ func (h *exporterHTTPHandler) serveMetrics(w http.ResponseWriter, request *http.
 		http.Error(w, "cannot register metrics collector", http.StatusInternalServerError)
 		return
 	}
-	registry.MustRegister(h.inFlight, h.rejected)
+	registry.MustRegister(h.inFlight, h.rejected, h.buildInfo)
 
 	errorLogger := log.New()
 	errorLogger.Level = log.ErrorLevel

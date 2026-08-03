@@ -13,7 +13,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const version string = "1.5.0"
+var (
+	version   = "dev"
+	revision  = "unknown"
+	buildDate = "unknown"
+)
 
 var (
 	showVersion      = flag.Bool("version", false, "Print version information.")
@@ -66,6 +70,8 @@ func main() {
 func printVersion() {
 	fmt.Println("bird_exporter")
 	fmt.Printf("Version: %s\n", version)
+	fmt.Printf("Revision: %s\n", revision)
+	fmt.Printf("Build date: %s\n", buildDate)
 	fmt.Println("Author(s): Daniel Czerwonk")
 	fmt.Println("Metric exporter for bird routing daemon")
 }

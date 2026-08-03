@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,9 @@ import (
 )
 
 func TestGetProtocolsHonorsQueryTimeout(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are not available on Windows")
+	}
 	path, wait := startBirdServer(t, "2002-incomplete\n", true)
 	client := &BirdClient{Options: &BirdClientOptions{
 		BirdV2:       true,
@@ -31,6 +35,9 @@ func TestGetProtocolsHonorsQueryTimeout(t *testing.T) {
 }
 
 func TestGetProtocolsHonorsResponseLimit(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are not available on Windows")
+	}
 	path, wait := startBirdServer(t, strings.Repeat("x", 256), false)
 	client := &BirdClient{Options: &BirdClientOptions{
 		BirdV2:       true,

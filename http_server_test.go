@@ -92,6 +92,7 @@ func TestExporterHTTPHandlerRejectsConcurrentScrapes(t *testing.T) {
 		t.Fatal("first scrape did not finish")
 	}
 	assert.Equal(t, http.StatusOK, firstRecorder.Code)
+	assert.Contains(t, firstRecorder.Body.String(), "bird_exporter_build_info")
 
 	thirdRecorder := httptest.NewRecorder()
 	handler.ServeHTTP(thirdRecorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
