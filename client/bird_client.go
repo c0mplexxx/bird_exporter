@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/czerwonk/bird_exporter/parser"
@@ -12,7 +13,8 @@ import (
 
 // BirdClient communicates with the bird socket to retrieve information
 type BirdClient struct {
-	Options *BirdClientOptions
+	Options     *BirdClientOptions
+	queryFailed atomic.Bool
 }
 
 // BirdClientOptions defines options to connect to bird
@@ -53,7 +55,11 @@ func (c *BirdClient) GetOSPFAreas(protocol *protocol.Protocol) ([]*protocol.OSPF
 		return nil, err
 	}
 
-	return parser.ParseOSPFWithError(b)
+	areas, err := parser.ParseOSPFWithError(b)
+	if err != nil {
+		c.queryFailed.Store(true)
+	}
+	return areas, err
 }
 
 // GetBFDSessions retrieves BFD specific information from bird
@@ -64,7 +70,11 @@ func (c *BirdClient) GetBFDSessions(protocol *protocol.Protocol) ([]*protocol.BF
 		return nil, err
 	}
 
-	return parser.ParseBFDSessionsWithError(protocol.Name, b)
+	sessions, err := parser.ParseBFDSessionsWithError(protocol.Name, b)
+	if err != nil {
+		c.queryFailed.Store(true)
+	}
+	return sessions, err
 }
 
 func (c *BirdClient) protocolsFromBird(ipVersions []string) ([]*protocol.Protocol, error) {
@@ -89,7 +99,17 @@ func (c *BirdClient) protocolsFromSocket(socketPath string, ipVersion string) ([
 		return nil, err
 	}
 
-	return parser.ParseProtocolsWithError(b, ipVersion)
+	protocols, err := parser.ParseProtocolsWithError(b, ipVersion)
+	if err != nil {
+		c.queryFailed.Store(true)
+	}
+	return protocols, err
+}
+
+// QueriesSucceeded reports whether every query and bounded parser operation
+// performed by this client has succeeded.
+func (c *BirdClient) QueriesSucceeded() bool {
+	return !c.queryFailed.Load()
 }
 
 func (c *BirdClient) socketFor(ipVersion string) string {
@@ -124,5 +144,9 @@ func (c *BirdClient) query(socketPath string, query string) ([]byte, error) {
 		options = append(options, birdsocket.WithMaxResponseBytes(c.Options.MaxResponse))
 	}
 
-	return birdsocket.QueryContext(ctx, socketPath, query, options...)
+	response, err := birdsocket.QueryContext(ctx, socketPath, query, options...)
+	if err != nil {
+		c.queryFailed.Store(true)
+	}
+	return response, err
 }

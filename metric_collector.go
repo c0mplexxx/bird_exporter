@@ -107,7 +107,7 @@ func exportersForDefault(c *client.BirdClient, descriptionLabels bool) map[proto
 
 var socketQueryDesc = prometheus.NewDesc(
 	"bird_socket_query_success",
-	"Result of querying bird socket: 0 = failed, 1 = suceeded",
+	"Result of all BIRD socket queries in this scrape: 0 = at least one failed, 1 = all succeeded",
 	nil,
 	nil,
 )
@@ -130,13 +130,8 @@ func (m *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 
 	protocols, err := m.client.GetProtocols()
 
-	var queryResult float64 = 1
 	if err != nil {
-		queryResult = 0
-	}
-	ch <- prometheus.MustNewConstMetric(socketQueryDesc, prometheus.GaugeValue, queryResult)
-
-	if err != nil {
+		ch <- prometheus.MustNewConstMetric(socketQueryDesc, prometheus.GaugeValue, 0)
 		log.Errorln(err)
 		return
 	}
@@ -154,4 +149,10 @@ func (m *MetricCollector) Collect(ch chan<- prometheus.Metric) {
 	if m.status != nil {
 		m.status.Collect(ch)
 	}
+
+	queryResult := float64(1)
+	if !m.client.QueriesSucceeded() {
+		queryResult = 0
+	}
+	ch <- prometheus.MustNewConstMetric(socketQueryDesc, prometheus.GaugeValue, queryResult)
 }

@@ -81,6 +81,19 @@ func startServer() {
 	if err := exportermetrics.ValidateDescriptionLabelsRegex(*descriptionLabels, *descriptionLabelsRegex); err != nil {
 		log.Fatalf("Invalid description labels regex: %v", err)
 	}
+	if err := validateExporterRuntimeConfig(exporterRuntimeConfig{
+		BirdV2:           *birdV2,
+		BirdEnabled:      *birdEnabled,
+		Bird6Enabled:     *bird6Enabled,
+		BirdSocket:       *birdSocket,
+		Bird6Socket:      *bird6Socket,
+		MaxResponseBytes: *maxResponseBytes,
+		TLSEnabled:       *tlsEnabled,
+		TLSCertFile:      *tlsCertChainPath,
+		TLSKeyFile:       *tlsKeyPath,
+	}); err != nil {
+		log.Fatal(err)
+	}
 
 	if !*newFormat {
 		log.Info("INFO: You are using the old metric format. Please consider using the new (more convenient one) by setting -format.new=true.")
@@ -115,6 +128,44 @@ func startServer() {
 	}
 
 	log.Fatal(server.ListenAndServe())
+}
+
+type exporterRuntimeConfig struct {
+	BirdV2           bool
+	BirdEnabled      bool
+	Bird6Enabled     bool
+	BirdSocket       string
+	Bird6Socket      string
+	MaxResponseBytes int
+	TLSEnabled       bool
+	TLSCertFile      string
+	TLSKeyFile       string
+}
+
+func validateExporterRuntimeConfig(config exporterRuntimeConfig) error {
+	if config.MaxResponseBytes <= 0 {
+		return fmt.Errorf("bird response limit must be positive: %d", config.MaxResponseBytes)
+	}
+	if config.BirdV2 {
+		if config.BirdSocket == "" {
+			return fmt.Errorf("bird socket path must not be empty in BIRD v2 mode")
+		}
+	} else {
+		if !config.BirdEnabled && !config.Bird6Enabled {
+			return fmt.Errorf("at least one of BIRD IPv4 or IPv6 must be enabled")
+		}
+		if config.BirdEnabled && config.BirdSocket == "" {
+			return fmt.Errorf("BIRD IPv4 socket path must not be empty")
+		}
+		if config.Bird6Enabled && config.Bird6Socket == "" {
+			return fmt.Errorf("BIRD IPv6 socket path must not be empty")
+		}
+	}
+	if config.TLSEnabled && (config.TLSCertFile == "" || config.TLSKeyFile == "") {
+		return fmt.Errorf("TLS certificate and key files are both required when TLS is enabled")
+	}
+
+	return nil
 }
 
 func enabledProtocols() protocol.Proto {
