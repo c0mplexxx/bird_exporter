@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/czerwonk/testutils/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,17 +36,17 @@ func TestOSPFArea(t *testing.T) {
 		"        Number of neighbors:    6\n" +
 		"        Number of adjacent neighbors:   5\n"
 	a := ParseOSPF([]byte(data))
-	assert.IntEqual("areas", 2, len(a), t)
+	assert.EqualValues(t, 2, len(a), "areas")
 
 	a1 := a[0]
-	assert.StringEqual("Area1 Name", "0", a1.Name, t)
-	assert.Int64Equal("Area1 InterfaceCount", 3, a1.InterfaceCount, t)
-	assert.Int64Equal("Area1 NeighborCount", 2, a1.NeighborCount, t)
-	assert.Int64Equal("Area1 NeighborAdjacentCount", 1, a1.NeighborAdjacentCount, t)
+	assert.EqualValues(t, "0", a1.Name, "Area1 Name")
+	assert.EqualValues(t, 3, a1.InterfaceCount, "Area1 InterfaceCount")
+	assert.EqualValues(t, 2, a1.NeighborCount, "Area1 NeighborCount")
+	assert.EqualValues(t, 1, a1.NeighborAdjacentCount, "Area1 NeighborAdjacentCount")
 
 	a2 := a[1]
-	assert.StringEqual("Area2 Name", "1", a2.Name, t)
-	assert.Int64Equal("Area2 InterfaceCount", 4, a2.InterfaceCount, t)
-	assert.Int64Equal("Area2 NeighborCount", 6, a2.NeighborCount, t)
-	assert.Int64Equal("Area2 NeighborAdjacentCount", 5, a2.NeighborAdjacentCount, t)
+	assert.EqualValues(t, "1", a2.Name, "Area2 Name")
+	assert.EqualValues(t, 4, a2.InterfaceCount, "Area2 InterfaceCount")
+	assert.EqualValues(t, 6, a2.NeighborCount, "Area2 NeighborCount")
+	assert.EqualValues(t, 5, a2.NeighborAdjacentCount, "Area2 NeighborAdjacentCount")
 }
