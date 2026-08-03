@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	exportermetrics "github.com/czerwonk/bird_exporter/metrics"
 	"github.com/czerwonk/bird_exporter/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -71,6 +72,9 @@ func printVersion() {
 
 func startServer() {
 	log.Infof("Starting bird exporter (Version: %s)", version)
+	if err := exportermetrics.ValidateDescriptionLabelsRegex(*descriptionLabels, *descriptionLabelsRegex); err != nil {
+		log.Fatalf("Invalid description labels regex: %v", err)
+	}
 
 	if !*newFormat {
 		log.Info("INFO: You are using the old metric format. Please consider using the new (more convenient one) by setting -format.new=true.")
