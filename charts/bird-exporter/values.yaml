@@ -1,5 +1,5 @@
 image:
-  repository: czerwonk/bird_exporter
+  repository: ghcr.io/czerwonk/bird_exporter
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
@@ -9,6 +9,9 @@ exporter:
     - "-format.new=true"
     - "-bird.socket=/var/run/bird/bird.ctl"
     - "-bird.socket6=/var/run/bird/bird6.ctl"
+    - "-web.scrape-timeout=5s"
+    - "-web.max-concurrent-scrapes=1"
+    - "-bird.max-response-bytes=4194304"
   # Host path of where the bird socket is.
   # This path will then be mounted into /var/run/bird in the container.
   birdSocketPath: "/var/run/bird"
@@ -35,8 +38,12 @@ podAnnotations: {}
 
 podSecurityContext:
   fsGroup: 2000
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
 
 securityContext:
+  allowPrivilegeEscalation: false
   capabilities:
     drop:
     - ALL
