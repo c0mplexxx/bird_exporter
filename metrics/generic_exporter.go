@@ -95,7 +95,7 @@ func (m *GenericProtocolMetricExporter) Export(p *protocol.Protocol, ch chan<- p
 	ch <- prometheus.MustNewConstMetric(withdrawsExportFilterCountDesc, prometheus.GaugeValue, float64(p.ExportWithdraws.Filtered), l...)
 	ch <- prometheus.MustNewConstMetric(withdrawsExportAcceptCountDesc, prometheus.GaugeValue, float64(p.ExportWithdraws.Accepted), l...)
 	ch <- prometheus.MustNewConstMetric(withdrawsExportIgnoreCountDesc, prometheus.GaugeValue, float64(p.ExportWithdraws.Ignored), l...)
-	
+
 	if p.RouteChangeFormatV3 {
 		updatesImportRxLimitCountDesc := prometheus.NewDesc(m.prefix+"_changes_update_import_rx_limit_count", "Number of incoming updates reaching RX limit", labels, nil)
 		updatesImportLimitCountDesc := prometheus.NewDesc(m.prefix+"_changes_update_import_limit_count", "Number of incoming updates reaching limit", labels, nil)
