@@ -81,7 +81,7 @@ func startServer() {
 	if err := exportermetrics.ValidateDescriptionLabelsRegex(*descriptionLabels, *descriptionLabelsRegex); err != nil {
 		log.Fatalf("Invalid description labels regex: %v", err)
 	}
-	if err := validateExporterRuntimeConfig(exporterRuntimeConfig{
+	runtimeConfig := exporterRuntimeConfig{
 		BirdV2:           *birdV2,
 		BirdEnabled:      *birdEnabled,
 		Bird6Enabled:     *bird6Enabled,
@@ -91,7 +91,8 @@ func startServer() {
 		TLSEnabled:       *tlsEnabled,
 		TLSCertFile:      *tlsCertChainPath,
 		TLSKeyFile:       *tlsKeyPath,
-	}); err != nil {
+	}
+	if err := validateExporterRuntimeConfig(runtimeConfig); err != nil {
 		log.Fatal(err)
 	}
 
@@ -109,7 +110,7 @@ func startServer() {
 				*newFormat,
 				enabledProtocols(),
 				*descriptionLabels,
-				*birdSocket,
+				statusSocketPath(runtimeConfig),
 				*scrapeTimeout,
 				*maxResponseBytes,
 			), nil
@@ -166,6 +167,14 @@ func validateExporterRuntimeConfig(config exporterRuntimeConfig) error {
 	}
 
 	return nil
+}
+
+func statusSocketPath(config exporterRuntimeConfig) string {
+	if config.BirdV2 || config.BirdEnabled {
+		return config.BirdSocket
+	}
+
+	return config.Bird6Socket
 }
 
 func enabledProtocols() protocol.Proto {

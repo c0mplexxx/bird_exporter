@@ -52,6 +52,25 @@ func TestGetProtocolsHonorsResponseLimit(t *testing.T) {
 	wait()
 }
 
+func TestStatusParseFailureMarksQueryFailed(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are not available on Windows")
+	}
+	path, wait := startBirdServer(t, "1000-BIRD 2.17.1\n1011-Daemon is sideways\n0000\n", false)
+	client := &BirdClient{Options: &BirdClientOptions{
+		BirdV2:       true,
+		BirdSocket:   path,
+		Context:      context.Background(),
+		QueryTimeout: time.Second,
+		MaxResponse:  4 << 20,
+	}}
+
+	_, err := client.StatusFromSocket(path)
+	require.Error(t, err)
+	require.False(t, client.QueriesSucceeded())
+	wait()
+}
+
 func startBirdServer(t *testing.T, response string, holdOpen bool) (string, func()) {
 	t.Helper()
 

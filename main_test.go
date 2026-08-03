@@ -34,3 +34,21 @@ func TestValidateExporterRuntimeConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestStatusSocketPath(t *testing.T) {
+	tests := []struct {
+		name   string
+		config exporterRuntimeConfig
+		want   string
+	}{
+		{name: "BIRD v2", config: exporterRuntimeConfig{BirdV2: true, BirdSocket: "/run/bird/bird.ctl", Bird6Socket: "/run/bird/bird6.ctl"}, want: "/run/bird/bird.ctl"},
+		{name: "BIRD v1 dual stack", config: exporterRuntimeConfig{BirdEnabled: true, Bird6Enabled: true, BirdSocket: "/run/bird/bird.ctl", Bird6Socket: "/run/bird/bird6.ctl"}, want: "/run/bird/bird.ctl"},
+		{name: "BIRD v1 IPv6 only", config: exporterRuntimeConfig{Bird6Enabled: true, BirdSocket: "/run/bird/bird.ctl", Bird6Socket: "/run/bird/bird6.ctl"}, want: "/run/bird/bird6.ctl"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, statusSocketPath(tt.config))
+		})
+	}
+}

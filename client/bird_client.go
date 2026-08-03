@@ -127,7 +127,11 @@ func (c *BirdClient) StatusFromSocket(socketPath string) (*parser.Status, error)
 		return nil, err
 	}
 
-	return parser.ParseStatus(b), nil
+	status, err := parser.ParseStatusWithError(b)
+	if err != nil {
+		c.queryFailed.Store(true)
+	}
+	return status, err
 }
 
 func (c *BirdClient) query(socketPath string, query string) ([]byte, error) {

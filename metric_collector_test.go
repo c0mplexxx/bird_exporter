@@ -46,6 +46,36 @@ func TestMetricCollectorReportsAuxiliaryQueryFailure(t *testing.T) {
 	wait()
 }
 
+func TestMetricCollectorReportsDaemonDownWithoutQueryFailure(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are not available on Windows")
+	}
+	path, wait := startSequenceBirdServer(t, []string{
+		"0000\n",
+		"1000-BIRD 2.17.1\n1011-Daemon is down\n0000\n",
+	})
+	birdClient := &client.BirdClient{Options: &client.BirdClientOptions{
+		BirdV2:       true,
+		BirdSocket:   path,
+		Context:      context.Background(),
+		QueryTimeout: time.Second,
+		MaxResponse:  4 << 20,
+	}}
+	collector := &MetricCollector{
+		exporters: make(map[protocol.Proto][]metrics.MetricExporter),
+		client:    birdClient,
+		status:    metrics.NewStatusExporter(birdClient, path),
+	}
+
+	registry := prometheus.NewRegistry()
+	require.NoError(t, registry.Register(collector))
+	metricFamilies, err := registry.Gather()
+	require.NoError(t, err)
+	require.Equal(t, float64(1), metricValue(t, metricFamilies, "bird_socket_query_success"))
+	require.Equal(t, float64(0), metricValue(t, metricFamilies, "bird_daemon_up"))
+	wait()
+}
+
 func metricValue(t *testing.T, families []*dto.MetricFamily, name string) float64 {
 	t.Helper()
 	for _, family := range families {
