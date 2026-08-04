@@ -54,6 +54,17 @@ func (*staticCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(testCollectorDesc, prometheus.GaugeValue, 1)
 }
 
+type invalidCollector struct{}
+
+func (*invalidCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- testCollectorDesc
+}
+
+func (*invalidCollector) Collect(ch chan<- prometheus.Metric) {
+	err := errors.New("invalid test metric")
+	ch <- prometheus.NewInvalidMetric(testCollectorDesc, err)
+}
+
 func TestExporterHTTPHandlerRejectsConcurrentScrapes(t *testing.T) {
 	started := make(chan struct{}, 1)
 	release := make(chan struct{})
@@ -213,6 +224,23 @@ func TestExporterHTTPHandlerCollectorFactoryError(t *testing.T) {
 	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
 	assert.False(t, strings.Contains(recorder.Body.String(), "test failure"))
+}
+
+func TestExporterHTTPHandlerFailsClosedOnGatherError(t *testing.T) {
+	handler, err := newExporterHTTPHandler(exporterHTTPConfig{
+		MetricsPath:          "/metrics",
+		ScrapeTimeout:        time.Second,
+		MaxConcurrentScrapes: 1,
+		CollectorFactory: func(context.Context) (prometheus.Collector, error) {
+			return &invalidCollector{}, nil
+		},
+	})
+	require.NoError(t, err)
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
+	assert.NotContains(t, recorder.Body.String(), "bird_exporter_build_info")
 }
 
 func TestNewExporterHTTPServerTimeouts(t *testing.T) {

@@ -4,7 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"os"
+	"strings"
 	"time"
 
 	exportermetrics "github.com/czerwonk/bird_exporter/metrics"
@@ -82,6 +84,7 @@ func startServer() {
 		log.Fatalf("Invalid description labels regex: %v", err)
 	}
 	runtimeConfig := exporterRuntimeConfig{
+		ListenAddress:    *listenAddress,
 		BirdV2:           *birdV2,
 		BirdEnabled:      *birdEnabled,
 		Bird6Enabled:     *bird6Enabled,
@@ -132,6 +135,7 @@ func startServer() {
 }
 
 type exporterRuntimeConfig struct {
+	ListenAddress    string
 	BirdV2           bool
 	BirdEnabled      bool
 	Bird6Enabled     bool
@@ -144,6 +148,9 @@ type exporterRuntimeConfig struct {
 }
 
 func validateExporterRuntimeConfig(config exporterRuntimeConfig) error {
+	if err := validateListenAddress(config.ListenAddress); err != nil {
+		return err
+	}
 	if config.MaxResponseBytes <= 0 {
 		return fmt.Errorf("bird response limit must be positive: %d", config.MaxResponseBytes)
 	}
@@ -164,6 +171,25 @@ func validateExporterRuntimeConfig(config exporterRuntimeConfig) error {
 	}
 	if config.TLSEnabled && (config.TLSCertFile == "" || config.TLSKeyFile == "") {
 		return fmt.Errorf("TLS certificate and key files are both required when TLS is enabled")
+	}
+
+	return nil
+}
+
+func validateListenAddress(address string) error {
+	if address == "" || strings.TrimSpace(address) != address {
+		return fmt.Errorf("web listen address must be a non-empty host:port: %q", address)
+	}
+
+	_, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return fmt.Errorf("invalid web listen address %q: %w", address, err)
+	}
+	if port == "" {
+		return fmt.Errorf("web listen address must include a port: %q", address)
+	}
+	if _, err := net.LookupPort("tcp", port); err != nil {
+		return fmt.Errorf("invalid web listen port %q: %w", port, err)
 	}
 
 	return nil

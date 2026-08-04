@@ -173,6 +173,6 @@ func (h *exporterHTTPHandler) serveMetrics(w http.ResponseWriter, request *http.
 	errorLogger.Level = log.ErrorLevel
 	promhttp.HandlerFor(registry, promhttp.HandlerOpts{
 		ErrorLog:      errorLogger,
-		ErrorHandling: promhttp.ContinueOnError,
+		ErrorHandling: promhttp.HTTPErrorOnError,
 	}).ServeHTTP(w, request.WithContext(ctx))
 }

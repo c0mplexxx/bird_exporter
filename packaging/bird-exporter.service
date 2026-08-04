@@ -2,11 +2,11 @@
 Description=Prometheus exporter for the BIRD routing daemon
 Documentation=https://github.com/czerwonk/bird_exporter
 Wants=network-online.target
-After=network-online.target bird.service
+After=network-online.target bird.service bird6.service
 
 [Service]
 Type=simple
-EnvironmentFile=-/etc/default/bird-exporter
+EnvironmentFile=/etc/default/bird-exporter
 ExecStart=/usr/bin/bird_exporter $BIRD_EXPORTER_OPTS
 DynamicUser=yes
 SupplementaryGroups=bird
