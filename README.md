@@ -138,7 +138,7 @@ The package installs the following files:
 ```text
 /usr/bin/bird_exporter
 /usr/lib/systemd/system/bird-exporter.service
-/etc/default/bird-exporter
+/etc/bird_exporter/bird_exporter.env
 /usr/share/doc/bird-exporter/
 ```
 
@@ -148,7 +148,7 @@ It intentionally does not enable or start the service.
 
 ```console
 stat -c '%n %U:%G %a' /run/bird/bird.ctl
-sudoedit /etc/default/bird-exporter
+sudoedit /etc/bird_exporter/bird_exporter.env
 ```
 
 The packaged BIRD 2/3 configuration is:
@@ -160,6 +160,12 @@ BIRD_EXPORTER_OPTS="-web.listen-address=127.0.0.1:9324 -bird.v2=true -bird.socke
 Point `-bird.socket` to the dedicated restricted socket if one was configured.
 The environment file is mandatory: deleting it makes the unit fail instead of
 silently returning to the binary's all-interface and BIRD 1 defaults.
+
+When upgrading from `v1.6.0-hardening.1`, manually copy any customized
+`BIRD_EXPORTER_OPTS` from `/etc/default/bird-exporter` into
+`/etc/bird_exporter/bird_exporter.env` before restarting the service. The old
+conffile may remain on disk after the package upgrade, but the new unit does not
+read it.
 
 ### 3. Validate and start
 
@@ -192,7 +198,7 @@ Dual daemon:
 BIRD_EXPORTER_OPTS="-web.listen-address=127.0.0.1:9324 -bird.v2=false -bird.ipv4=true -bird.ipv6=true -bird.socket=/run/bird/bird.ctl -bird.socket6=/run/bird/bird6.ctl -web.scrape-timeout=5s -web.max-concurrent-scrapes=1 -bird.max-response-bytes=4194304"
 ```
 
-Restart the service after changing `/etc/default/bird-exporter`:
+Restart the service after changing `/etc/bird_exporter/bird_exporter.env`:
 
 ```console
 sudo systemctl restart bird-exporter.service
@@ -390,7 +396,7 @@ systemctl cat bird-exporter.service
 ```
 
 - `Failed to load environment files`: restore and review
-  `/etc/default/bird-exporter`.
+  `/etc/bird_exporter/bird_exporter.env`.
 - `invalid web listen address`: use `host:port`; bracket IPv6, for example
   `[::1]:9324`.
 - `address already in use`: check `ss -ltnp 'sport = :9324'` and stop the

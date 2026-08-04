@@ -6,7 +6,7 @@ After=network-online.target bird.service bird6.service
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/default/bird-exporter
+EnvironmentFile=/etc/bird_exporter/bird_exporter.env
 ExecStart=/usr/bin/bird_exporter $BIRD_EXPORTER_OPTS
 DynamicUser=yes
 SupplementaryGroups=bird

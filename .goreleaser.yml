@@ -56,8 +56,12 @@ nfpms:
         dst: /usr/lib/systemd/system/bird-exporter.service
         file_info:
           mode: 0644
-      - src: packaging/bird-exporter.default
-        dst: /etc/default/bird-exporter
+      - dst: /etc/bird_exporter
+        type: dir
+        file_info:
+          mode: 0755
+      - src: packaging/bird_exporter.env
+        dst: /etc/bird_exporter/bird_exporter.env
         type: config|noreplace
         file_info:
           mode: 0644
