@@ -5,8 +5,8 @@ conflict with Debian's `prometheus-bird-exporter`, but both services cannot
 listen on TCP port 9324 at the same time.
 
 The package installs the binary, a hardened systemd unit, the mandatory
-`/etc/default/bird-exporter` configuration and project documentation. It does
-not enable or start the service.
+`/etc/bird_exporter/bird_exporter.env` configuration and project
+documentation. It does not enable or start the service.
 
 ## Before starting
 
@@ -19,9 +19,9 @@ not enable or start the service.
 2. Where supported, prefer a dedicated restricted BIRD CLI socket. A read-only
    filesystem mount does not make the BIRD command protocol read-only.
 
-3. Review `/etc/default/bird-exporter`. The packaged BIRD 2/3 default binds to
-   `127.0.0.1:9324` and limits one scrape to five seconds, one concurrent
-   request and a 4 MiB BIRD reply.
+3. Review `/etc/bird_exporter/bird_exporter.env`. The packaged BIRD 2/3 default
+   binds to `127.0.0.1:9324` and limits one scrape to five seconds, one
+   concurrent request and a 4 MiB BIRD reply.
 
 4. If the socket group is not `bird`, replace
    `SupplementaryGroups=bird` with a systemd drop-in. Do not run the exporter
@@ -40,6 +40,15 @@ not enable or start the service.
 The environment file is intentionally mandatory. If it is missing, systemd
 must fail the service rather than fall back to the standalone binary defaults
 of all-interface `:9324`, BIRD 1 mode and `/var/run/bird.ctl`.
+
+### Upgrade from v1.6.0-hardening.1
+
+That prerelease used `/etc/default/bird-exporter`. Before restarting the new
+unit, manually copy any customized `BIRD_EXPORTER_OPTS` into
+`/etc/bird_exporter/bird_exporter.env`. The old conffile may remain on disk
+after upgrade because the package does not delete operator configuration; the
+new unit ignores it and it can be removed manually only after the migrated
+configuration has been verified.
 
 ## Remote scraping
 

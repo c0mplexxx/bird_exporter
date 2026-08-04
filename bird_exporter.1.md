@@ -239,8 +239,8 @@ provides:
 # SYSTEMD
 
 The Debian package installs **bird-exporter.service** and the mandatory
-**/etc/default/bird-exporter** configuration file but does not enable or start
-the service.
+**/etc/bird_exporter/bird_exporter.env** configuration file but does not enable
+or start the service.
 
 The packaged default is:
 
@@ -252,9 +252,13 @@ The unit uses **DynamicUser=yes** and **SupplementaryGroups=bird**. Override
 the supplementary group with a systemd drop-in when the selected socket uses a
 different group.
 
+When upgrading from **v1.6.0-hardening.1**, copy customized options from
+**/etc/default/bird-exporter** to the new environment file before restarting.
+The new unit does not read the old path.
+
 # FILES
 
-**/etc/default/bird-exporter**
+**/etc/bird_exporter/bird_exporter.env**
 : Packaged command-line options. Mandatory for the packaged unit.
 
 **/usr/lib/systemd/system/bird-exporter.service**
