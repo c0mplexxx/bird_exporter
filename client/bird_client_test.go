@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	birdsocket "github.com/czerwonk/bird_socket"
+	birdsocket "github.com/c0mplexxx/bird_socket"
 	"github.com/stretchr/testify/require"
 )
 

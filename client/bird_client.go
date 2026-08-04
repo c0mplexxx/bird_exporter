@@ -8,7 +8,7 @@ import (
 
 	"github.com/czerwonk/bird_exporter/parser"
 	"github.com/czerwonk/bird_exporter/protocol"
-	birdsocket "github.com/czerwonk/bird_socket"
+	birdsocket "github.com/c0mplexxx/bird_socket"
 )
 
 // BirdClient communicates with the bird socket to retrieve information
